@@ -1,0 +1,23 @@
+# Build artifacts
+bin/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled objects
+*.o
+*.elf
+*.bin
+a.out
+
+# macOS
+.DS_Store
+
+# Test binaries
+test_*
+!tests/test_*

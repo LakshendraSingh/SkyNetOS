@@ -1,0 +1,31 @@
+name: SkynetOS CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib make nasm
+
+    - name: Run Tests
+      run: make test
+
+    - name: Build Kernel
+      run: |
+        mkdir -p build bin
+        # Note: We use standard gcc for the hosted build check, 
+        # but the Makefile uses i386-elf-gcc which might not be in the default CI env.
+        # For CI, we primarily verify logic via 'make test' which uses standard gcc.
+        echo "Testing build logic with standard gcc..."
+        make test
