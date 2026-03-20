@@ -135,7 +135,7 @@ void print_char(char c) {
     } else if (c == '\t') {
         // Tab = advance to next 8-column boundary
         cursor_pos += 8 - (cursor_pos % 8);
-    } else if (c >= 32 && c <= 126) {
+    } else if ((unsigned char)c >= 32 && (unsigned char)c != 127) {
         video_memory[cursor_pos * 2] = c;
         video_memory[cursor_pos * 2 + 1] = 0x07;
         cursor_pos++;
@@ -150,6 +150,47 @@ void print_char(char c) {
 
 void print(const char* str) {
     while (*str) {
+        unsigned char c = (unsigned char)*str;
+        // Convert 3-byte UTF-8 box-drawing/block chars to CP437
+        if (c == 0xE2 && str[1] && str[2]) {
+            unsigned char b1 = (unsigned char)str[1];
+            unsigned char b2 = (unsigned char)str[2];
+            char cp = 0;
+            if (b1 == 0x95) {
+                switch (b2) {
+                    case 0x90: cp = (char)0xCD; break; // ═
+                    case 0x91: cp = (char)0xBA; break; // ║
+                    case 0x94: cp = (char)0xC9; break; // ╔
+                    case 0x97: cp = (char)0xBB; break; // ╗
+                    case 0x9A: cp = (char)0xC8; break; // ╚
+                    case 0x9D: cp = (char)0xBC; break; // ╝
+                    case 0xA0: cp = (char)0xCC; break; // ╠
+                    case 0xA3: cp = (char)0xB9; break; // ╣
+                }
+            } else if (b1 == 0x96 && b2 == 0x88) {
+                cp = (char)0xDB; // █
+            } else if (b1 == 0x80 && b2 == 0x94) {
+                cp = '-'; // — (em dash)
+            }
+            if (cp) {
+                print_char(cp);
+                str += 3;
+                continue;
+            }
+        }
+        // Skip unrecognized multi-byte UTF-8 sequences
+        if (c >= 0xE0 && c <= 0xEF && str[1] && str[2]) {
+            str += 3;
+            continue;
+        }
+        if (c >= 0xC0 && c <= 0xDF && str[1]) {
+            str += 2;
+            continue;
+        }
+        if (c >= 0xF0 && c <= 0xF7 && str[1] && str[2] && str[3]) {
+            str += 4;
+            continue;
+        }
         print_char(*str++);
     }
 }

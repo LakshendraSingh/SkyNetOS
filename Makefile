@@ -37,7 +37,7 @@ all:
 	dd if=./bin/kernel.bin of=./bin/os.bin seek=1 conv=notrunc
 
 run: all
-	qemu-system-i386 -drive format=raw,file=./bin/os.bin
+	qemu-system-i386 -display cocoa,zoom-to-fit=on -drive format=raw,file=./bin/os.bin
 
 test:
 	gcc -O0 -I./src src/security.c src/sha3.c tests/test_security.c -o test_security && ./test_security
