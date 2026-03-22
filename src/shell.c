@@ -109,6 +109,43 @@ void handle_command(const char* command) {
         print("Deleted: ");
         print(filename);
         print("\n");
+    } else if (strncmp(cmd_buffer, "edit ", 5) == 0) {
+        const char* filename = cmd_buffer + 5;
+        uint8_t file_buffer[4096];
+        size_t current_size = 0;
+        
+        int res = read_file(filename, file_buffer, &current_size);
+        if (res != 0) {
+            create_file(filename);
+            current_size = 0;
+        } else if (current_size > 0) {
+            print("--- Current File Contents ---\n");
+            file_buffer[current_size] = '\0';
+            print((char*)file_buffer);
+            if (file_buffer[current_size - 1] != '\n') {
+                print("\n");
+            }
+        }
+        
+        print("--- Edit Mode ---\n");
+        print("Type your text. Type ':wq' on a new line to save and exit.\n");
+        char line_buf[256];
+        while (1) {
+            read_line(line_buf, sizeof(line_buf));
+            if (strcmp(line_buf, ":wq") == 0) {
+                break;
+            }
+            size_t line_len = strlen(line_buf);
+            if (current_size + line_len + 1 < sizeof(file_buffer)) {
+                memcpy(file_buffer + current_size, line_buf, line_len);
+                current_size += line_len;
+                file_buffer[current_size++] = '\n';
+            } else {
+                print("Buffer full! Cannot add more text.\n");
+            }
+        }
+        write_file(filename, file_buffer, current_size);
+        print("File saved.\n");
     } else if (strcmp(cmd_buffer, "ps") == 0) {
         ps_command();
     } else if (strncmp(cmd_buffer, "kill ", 5) == 0) {
@@ -153,6 +190,7 @@ void print_help() {
     print("  touch <f>  - Create an empty file\n");
     print("  mkdir <d>  - Create a directory\n");
     print("  rm <file>  - Delete a file\n");
+    print("  edit <file>- Edit or create a file\n");
     print("  ps         - List active processes\n");
     print("  kill <pid> - Terminate a process\n");
     print("  sim_load   - Run simulated workload (& for bg)\n");
