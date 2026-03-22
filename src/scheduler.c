@@ -180,8 +180,6 @@ void schedule() {
         current_pid = next_pid;
         tasks[current_pid].state = TASK_RUNNING;
         print("Switching to Task "); print_int(current_pid); print(" (Queue "); print_int(tasks[current_pid].priority_level); print(").\n");
-    } else {
-        print("No tasks ready to run.\n");
     }
 }
 

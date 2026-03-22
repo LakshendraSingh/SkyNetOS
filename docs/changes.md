@@ -22,6 +22,9 @@
 - `thread-add <pid>` — Modify TCB bounds explicitly manually testing structures tracking bounds logically.
 - `disk-test` — Kick off SSTF native sorting iterations testing structural outputs transparently.
 
+### Bug Fixes
+- **Scheduler Spam**: Removed intensive "No tasks ready to run" console printing sequences triggered natively by asynchronous `system_tick` polling loops evaluating idle queues on boot.
+
 ---
 
 ## v2.0 — Baremetal OS Complete
