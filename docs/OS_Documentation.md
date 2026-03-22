@@ -5,7 +5,7 @@ SkyNetOS is a monolithic x86 operating system with a custom bootloader, 32-bit p
 
 ## 2. Memory Management
 Implemented in `memory_management.c`:
-- **Page Allocator**: 1024 × 4KB pages using **Next-Fit** strategy for fast free-page discovery.
+- **Page Allocator**: 1024 × 4KB pages using **Next-Fit** strategy. Features active **Process Isolation** where pages are strictly bound to specific `owner_pid`s preventing cross-process manipulation.
 - **Heap Allocator**: 1MB slab with block-based `malloc`/`free`, block splitting, and coalescing on `free()`.
 
 ## 3. CPU Scheduling
@@ -13,6 +13,7 @@ Implemented in `scheduler.c`:
 
 ### MLFQ (Multi-Level Feedback Queue)
 - **3 Queues** (Q0–Q2) with time quantums of 4, 8, and 16 units.
+- **Asynchronous Ticking**: Background tasks decrement their quantum via `system_tick` hooked directly into the keyboard polling loop logic.
 - **Dynamic Demotion**: Tasks that exhaust their quantum are moved to lower-priority queues.
 - **Priority Boosting**: Periodic reset of all tasks to Q0 to prevent starvation.
 - **Round Robin**: Within each queue level.
@@ -51,9 +52,19 @@ Implemented in `file_system.c`:
 - **Font Engine**: Complete printable ASCII font (chars 32–126) using 8×8 bitmap glyphs.
 - **Desktop**: Taskbar at screen bottom, blue desktop background.
 
-## 8. Bootloader
+## 8. Disk Scheduling
+Implemented in `disk_scheduler.c`:
+- **Algorithm**: Shortest Seek Time First (SSTF).
+- **Operation**: Maintains a mock request array of up to 64 track sectors. Head movement distances are optimized dynamically to process requests out-of-order, minimizing long contiguous arm seeks.
+
+## 9. Bootloader
 Implemented in `bootloader.asm`:
 - 512-byte MBR with `0xAA55` signature.
 - Reads 127 sectors via BIOS `int 0x13` to load the kernel at `0x10000`.
 - Sets up GDT and transitions CPU from 16-bit real mode to 32-bit protected mode.
 - Jumps to `kernel_main()` entry point.
+
+## 10. Concurrency & Synchronization
+Implemented in `sync.c` and `sync.h` natively securing critical system faults inherently:
+- **`spinlock_t`**: Low-level hardware-assisted bounds leveraging standard GCC compiler atomics (`__atomic_test_and_set`) directly evaluating multi-architecture assembly instructions (using native `pause` for x86 loops vs `yield` for robust ARM compilations) minimizing heavy polling loads across local arrays.
+- **`mutex_t`**: Top-level macro wrapping internal blocked sequences enforcing static FIFO arrays dynamically tracking ownership thresholds directly triggering explicit `TASK_BLOCKED` states via targeted `task_yield()` constructs liberating parallel scheduler cycles algorithmically.

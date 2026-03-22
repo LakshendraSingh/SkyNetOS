@@ -86,11 +86,74 @@ void test_priority_boost() {
     printf("  [PASS] test_priority_boost\n\n");
 }
 
+void test_system_tick() {
+    printf("--- Testing System Tick ---\n");
+    scheduler_init();
+    int res[] = {1, 1, 1};
+    int pid = task_create(res);
+    schedule(); 
+    tcb_t info;
+    get_task_info(pid, &info);
+    int initial_q = info.remaining_quantum;
+    
+    system_tick();
+    
+    get_task_info(pid, &info);
+    assert(info.remaining_quantum == initial_q - 1);
+    printf("  [PASS] test_system_tick\n\n");
+}
+
+void test_thread_create() {
+    printf("--- Testing Thread Creation ---\n");
+    scheduler_init();
+    int res[] = {1, 1, 1};
+    int pid = task_create(res);
+    
+    assert(thread_create(pid) == true);
+    
+    tcb_t info;
+    get_task_info(pid, &info);
+    assert(info.thread_count == 2);
+    
+    thread_create(pid);
+    thread_create(pid);
+    assert(thread_create(pid) == false); // Max is 4 (inclusive of base)
+    
+    printf("  [PASS] test_thread_create\n\n");
+}
+
+void test_ipc() {
+    printf("--- Testing IPC Messaging ---\n");
+    scheduler_init();
+    int res[] = {1, 1, 1};
+    int pid1 = task_create(res);
+    int pid2 = task_create(res);
+    
+    assert(ipc_send(pid2, "Hello IPC") == true);
+    
+    tcb_t info;
+    get_task_info(pid2, &info);
+    assert(info.msg_count == 1);
+    
+    char buf[64];
+    assert(ipc_receive(pid2, buf) == true);
+    assert(strcmp(buf, "Hello IPC") == 0);
+    
+    get_task_info(pid2, &info);
+    assert(info.msg_count == 0);
+    assert(ipc_receive(pid2, buf) == false);
+    
+    printf("  [PASS] test_ipc\n\n");
+}
+
 int main() {
     printf("Starting Task Scheduler Unit Tests...\n");
     test_banker_algorithm();
     test_mlfq_scheduling();
     test_priority_boost();
+    test_system_tick();
+    test_thread_create();
+    test_ipc();
     printf("All scheduler tests completed successfully!\n");
     return 0;
 }

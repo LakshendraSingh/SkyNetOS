@@ -8,23 +8,26 @@
 #include "vga.h"
 #include "file_system.h"
 #include "memory_management.h"
+#include "disk_scheduler.h"
 
 void handle_command(const char* command);
 void print_help();
 
 void ps_command() {
     tcb_t info;
-    print("PID\tPRIO\tSTATE\n");
+    print("PID\tPRIO\tSTATE\tTHRDS\tMSGS\n");
     for (int i = 0; i < MAX_TASKS; i++) {
         if (get_task_info(i, &info)) {
             print_int(info.pid); print("\t");
             print_int(info.priority_level); print("\t");
             switch (info.state) {
-                case TASK_RUNNING: print("RUNNING\n"); break;
-                case TASK_READY:   print("READY\n"); break;
-                case TASK_BLOCKED: print("BLOCKED\n"); break;
-                default:           print("UNKNOWN\n"); break;
+                case TASK_RUNNING: print("RUN\t"); break;
+                case TASK_READY:   print("RDY\t"); break;
+                case TASK_BLOCKED: print("BLK\t"); break;
+                default:           print("UNK\t"); break;
             }
+            print_int(info.thread_count); print("\t");
+            print_int(info.msg_count); print("\n");
         }
     }
 }
@@ -151,6 +154,35 @@ void handle_command(const char* command) {
     } else if (strncmp(cmd_buffer, "kill ", 5) == 0) {
         int pid = cmd_buffer[5] - '0';
         task_terminate(pid);
+    } else if (strncmp(cmd_buffer, "thread-add ", 11) == 0) {
+        int pid = cmd_buffer[11] - '0';
+        if (!thread_create(pid)) print("Failed to add thread.\n");
+    } else if (strncmp(cmd_buffer, "ipc-send ", 9) == 0) {
+        int pid = cmd_buffer[9] - '0';
+        if (cmd_buffer[10] == ' ') {
+            if (!ipc_send(pid, cmd_buffer + 11)) print("IPC send failed.\n");
+        } else {
+            print("Usage: ipc-send <pid> <msg>\n");
+        }
+    } else if (strncmp(cmd_buffer, "ipc-recv ", 9) == 0) {
+        int pid = cmd_buffer[9] - '0';
+        char msg_buf[64];
+        if (ipc_receive(pid, msg_buf)) {
+            print("Received: "); print(msg_buf); print("\n");
+        } else {
+            print("No messages or IPC failed.\n");
+        }
+    } else if (strcmp(cmd_buffer, "disk-test") == 0) {
+        init_disk_scheduler();
+        submit_disk_request(98);
+        submit_disk_request(183);
+        submit_disk_request(37);
+        submit_disk_request(122);
+        submit_disk_request(14);
+        submit_disk_request(124);
+        submit_disk_request(65);
+        submit_disk_request(67);
+        process_disk_requests(53); // Starting head position
     } else if (strcmp(cmd_buffer, "exit") == 0) {
         print("Exiting shell...\n");
         err_handler(System_Shutdown);

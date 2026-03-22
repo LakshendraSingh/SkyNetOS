@@ -58,6 +58,11 @@ Password: skynet
 | `ps`           | List active processes                        |
 | `kill <pid>`   | Terminate a process                          |
 | `sim-load`     | Simulate a workload (add `&` for background) |
+| `edit <file>`  | Interactive text editor to modify files      |
+| `ipc-send`     | Send an IPC message: `ipc-send <pid> <msg>`  |
+| `ipc-recv`     | Receive an IPC message: `ipc-recv <pid>`     |
+| `thread-add`   | Add a thread to a PID: `thread-add <pid>`    |
+| `disk-test`    | Run the SSTF disk scheduler test             |
 | `gui`          | Enter graphical desktop mode                 |
 | `exit`         | Shutdown the system                          |
 
@@ -81,8 +86,8 @@ Type `gui` in the shell to enter the desktop environment.
 
 SkyNetOS uses a **Multi-Level Feedback Queue (MLFQ)** scheduler:
 
-- **Background tasks**: Append `&` to run a command in the background
-- **Monitor**: Use `ps` to list running processes
+- **Background tasks**: Append `&` to run a command in the background. Their quantum is seamlessly advanced during input wait cycles using `system_tick()`.
+- **Monitor**: Use `ps` to list running processes, active threads, and pending IPC mailbox size.
 - **Terminate**: Use `kill <pid>` to stop a process
 - **Safety**: The Banker's Algorithm prevents deadlocks during resource allocation
 

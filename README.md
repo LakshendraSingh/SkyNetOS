@@ -12,11 +12,13 @@ A baremetal x86 operating system built from scratch — bootloader, kernel, shel
 | **Kernel** | 32-bit protected mode C kernel with modular architecture |
 | **Shell** | Interactive command-line interface with 12+ commands |
 | **GUI** | 800×600 SVGA desktop with window manager (BGA + LFB) |
-| **Scheduler** | Multi-Level Feedback Queue (MLFQ) with round-robin |
-| **Memory** | Page-based allocator + heap manager with coalescing |
-| **File System** | In-memory VFS with files and directories |
+| **Scheduler** | MLFQ with background simulated ticks and basic IPC messaging |
+| **Multithreading**| Task thread counters via TCB simulation |
+| **Memory** | Page-based allocator with basic Process Isolation via PID tagging |
+| **File System** | In-memory VFS with files, directories, and interactive `edit` capability |
+| **Disk** | Simulated Mock Disk Scheduler utilizing Shortest Seek Time First (SSTF) |
 | **Security** | SHA-3 256 password authentication with masked input |
-| **Keyboard** | PS/2 driver with full US QWERTY + Shift support |
+| **Keyboard** | PS/2 driver with full US QWERTY + Shift support + asynchronous background context ticks |
 
 ## Quick Start
 
@@ -55,6 +57,10 @@ SkyNet > help
   ps         - List active processes
   kill <pid> - Terminate a process
   sim-load   - Run simulated workload (& for bg)
+  ipc-send   - Send IPC msg: ipc-send <pid> <msg>
+  ipc-recv   - Read IPC msg from process mailbox
+  thread-add - Create mock thread for process
+  disk-test  - Run SSTF disk scheduler test
   gui        - Start GUI mode
   exit       - Shutdown the system
 ```
@@ -93,8 +99,9 @@ src/
 ├── gui.c / gui.h       # Window manager + font engine
 ├── shell.c / shell.h   # Command-line shell
 ├── scheduler.c / .h    # MLFQ task scheduler
-├── memory_management.c # Page + heap allocator
+├── memory_management.c # Page + heap allocator with basic process isolation
 ├── file_system.c / .h  # In-memory file system
+├── disk_scheduler.c/.h # SSTF disk scheduling algorithm logic
 ├── security.c / .h     # SHA-3 authentication
 ├── sha3.c / sha3.h     # SHA-3 256 implementation
 ├── string.c / .h       # Freestanding libc subset
@@ -107,8 +114,11 @@ src/
 - **Boot**: BIOS `int 0x13` loads 127 sectors → GDT → protected mode → `kernel_main()`
 - **Display**: PCI bus scan detects Bochs VGA BAR0 for LFB address at runtime
 - **Keyboard**: Interrupt-driven PS/2 with Shift state tracking and scan-code translation
-- **Memory**: 1024 × 4KB pages + 1MB slab heap with block splitting and coalescing
-- **Deadlock Prevention**: Banker's Algorithm for resource allocation safety checks
+- **Memory**: 1024 × 4KB pages + 1MB slab heap; basic isolation tracking via PID tagging.
+- **Deadlock Prevention**: Banker's Algorithm for resource allocation safety checks.
+- **Concurrency Defenses**: Resolves classic critical section constraints intrinsically distributing explicit `spinlock_t` and queuing `mutex_t` blocks securely across all asynchronous mutations tracking safe context states directly. 
+- **IPC & Background Processing**: Mailbox queues supporting up to 5 unread messages strictly isolated per task natively locked by Mutex bounds; system ticks inject asynchronous background MLFQ updates dynamically.
+- **Disk Scheduling**: FCFS/SSTF algorithms exposed virtually to sequence IO natively monitored strictly by independent Atomic Spinlocks minimizing algorithmic faults.
 
 ## License
 

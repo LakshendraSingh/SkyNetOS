@@ -38,6 +38,13 @@ int task_create(int max_resources[MAX_RESOURCES]) {
             tasks[i].remaining_quantum = quantums[0];
             tasks[i].time_slice = quantums[0];
             
+            tasks[i].thread_count = 1;
+            tasks[i].msg_count = 0;
+            mutex_init(&tasks[i].ipc_mutex);
+            for(int m = 0; m < MAX_IPC_MESSAGES; m++) {
+                tasks[i].mailbox[m].valid = false;
+            }
+            
             for (int r = 0; r < MAX_RESOURCES; r++) {
                 tasks[i].max_demand[r] = max_resources[r];
                 tasks[i].allocation[r] = 0;
@@ -217,4 +224,96 @@ bool get_task_info(int pid, tcb_t* out) {
     if (pid < 0 || pid >= MAX_TASKS || tasks[pid].state == TASK_TERMINATED) return false;
     if (out) *out = tasks[pid];
     return true;
+}
+
+void system_tick() {
+    if (current_pid != -1) {
+        tasks[current_pid].remaining_quantum--;
+        if (tasks[current_pid].remaining_quantum <= 0) {
+            task_yield(true);
+        }
+    } else {
+        schedule();
+    }
+}
+
+bool thread_create(int pid) {
+    if (pid < 0 || pid >= MAX_TASKS || tasks[pid].state == TASK_TERMINATED) return false;
+    if (tasks[pid].thread_count >= MAX_THREADS_PER_TASK) return false;
+    tasks[pid].thread_count++;
+    print("Thread created in Task "); print_int(pid); print(" (Total: "); print_int(tasks[pid].thread_count); print(")\n");
+    return true;
+}
+
+bool ipc_send(int receiver_pid, const char* msg) {
+    if (receiver_pid < 0 || receiver_pid >= MAX_TASKS || tasks[receiver_pid].state == TASK_TERMINATED) return false;
+    tcb_t* t = &tasks[receiver_pid];
+    
+    mutex_lock(&t->ipc_mutex);
+    if (t->msg_count >= MAX_IPC_MESSAGES) {
+        mutex_unlock(&t->ipc_mutex);
+        return false;
+    }
+    
+    for (int i = 0; i < MAX_IPC_MESSAGES; i++) {
+        if (!t->mailbox[i].valid) {
+            int j = 0;
+            while(msg[j] && j < MAX_MSG_LENGTH - 1) {
+                t->mailbox[i].message[j] = msg[j];
+                j++;
+            }
+            t->mailbox[i].message[j] = '\0';
+            t->mailbox[i].valid = true;
+            t->msg_count++;
+            mutex_unlock(&t->ipc_mutex);
+            print("Message sent to Task "); print_int(receiver_pid); print("\n");
+            return true;
+        }
+    }
+    mutex_unlock(&t->ipc_mutex);
+    return false;
+}
+
+bool ipc_receive(int receiver_pid, char* buffer_out) {
+    if (receiver_pid < 0 || receiver_pid >= MAX_TASKS || tasks[receiver_pid].state == TASK_TERMINATED) return false;
+    tcb_t* t = &tasks[receiver_pid];
+    
+    mutex_lock(&t->ipc_mutex);
+    if (t->msg_count == 0) {
+        mutex_unlock(&t->ipc_mutex);
+        return false;
+    }
+    
+    for (int i = 0; i < MAX_IPC_MESSAGES; i++) {
+        if (t->mailbox[i].valid) {
+            int j = 0;
+            while(t->mailbox[i].message[j] && j < MAX_MSG_LENGTH - 1) {
+                buffer_out[j] = t->mailbox[i].message[j];
+                j++;
+            }
+            buffer_out[j] = '\0';
+            t->mailbox[i].valid = false;
+            t->msg_count--;
+            mutex_unlock(&t->ipc_mutex);
+            return true;
+        }
+    }
+    mutex_unlock(&t->ipc_mutex);
+    return false;
+}
+
+int get_current_pid() {
+    return current_pid;
+}
+
+void task_block(int pid) {
+    if (pid < 0 || pid >= MAX_TASKS || tasks[pid].state == TASK_TERMINATED) return;
+    tasks[pid].state = TASK_BLOCKED;
+}
+
+void task_unblock(int pid) {
+    if (pid < 0 || pid >= MAX_TASKS || tasks[pid].state != TASK_BLOCKED) return;
+    tasks[pid].state = TASK_READY;
+    int q = tasks[pid].priority_level;
+    queues[q][queue_counts[q]++] = pid;
 }

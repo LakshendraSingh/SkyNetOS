@@ -1,5 +1,29 @@
 # SkyNetOS Changelog
 
+## v3.0 — Advanced OS Systems
+
+### Concurrency & Synchronization
+- **Atomic Spinlocks**: Implemented cross-architecture (`__atomic_test_and_set`) locks explicitly protecting physical page mappings and simulated disk environments without starvation.
+- **Blocking Mutexes**: Engineered `mutex_t` deeply intertwined with the `scheduler.c` logic, allowing tasks to gracefully un-schedule themselves from the active CPU loop into `TASK_BLOCKED` barriers mitigating excessive polling natively.
+
+### Process Management & IPC
+- **IPC Mailboxes**: Bounded asynchronous queues enabling secure cross-process communications locally protected by `mutex_t` limits natively (up to 5 static messages). Exposed by the shell as `ipc-send` & `ipc-recv`.
+- **Multithreading logic**: Appended explicit thread-tracking scopes to the core OS TCB limits (`thread-add`).
+- **Asynchronous Ticking**: Attached MLFQ quantum updates systematically into `io.c`'s idle loop, granting background simulations reliable progress outside explicit `schedule()` commands.
+
+### Memory & Storage 
+- **Process Isolation**: Extended the `allocate_process_memory()` pipeline statically capturing distinct `owner_pid` identifiers natively denying non-kernel remote-process deallocations seamlessly.
+- **Disk Scheduling**: Implemented `disk_scheduler.c` iteratively assessing active arrays sorting natively executing tracking against Shortest Seek Time First (SSTF) algorithms optimally minimizing mock contiguous seeks recursively.
+
+### Shell — 5 New Commands
+- `edit <file>` — Formally integrated an interactive text-editing loop supporting dynamic buffer writes!
+- `ipc-send <pid> <msg>` — Transmit process messages.
+- `ipc-recv <pid>` — Print explicit tasks' oldest mail messages cleanly.
+- `thread-add <pid>` — Modify TCB bounds explicitly manually testing structures tracking bounds logically.
+- `disk-test` — Kick off SSTF native sorting iterations testing structural outputs transparently.
+
+---
+
 ## v2.0 — Baremetal OS Complete
 
 ### GUI — 800×600 SVGA Desktop

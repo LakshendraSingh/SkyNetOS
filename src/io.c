@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "io.h"
 #include "error_codes.h"
+#include "scheduler.h"
 
 
 #ifdef __i386__
@@ -224,8 +225,15 @@ void clear_screen() {
 }
 
 char read_char() {
+    int tick_counter = 0;
     while (1) {
-        while (!(inb(0x64) & 0x01));
+        while (!(inb(0x64) & 0x01)) {
+            tick_counter++;
+            if (tick_counter > 500000) {
+                system_tick();
+                tick_counter = 0;
+            }
+        }
         uint8_t scancode = inb(0x60);
 
         // Left Shift press/release (0x2A / 0xAA)

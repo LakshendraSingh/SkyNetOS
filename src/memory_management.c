@@ -12,15 +12,22 @@
 
 typedef struct {
     uint8_t allocated;  // 1 = allocated, 0 = free
+    int owner_pid;      // Process that owns this page (-1 for kernel)
 } page_frame_t;
 
 static page_frame_t page_table[TOTAL_PAGES];
 static uint8_t memory_pool[TOTAL_PAGES * PAGE_SIZE];  // back the pages with real memory
 static int last_page_index = 0;  // For Next-Fit optimization
 
+#include "sync.h"
+static spinlock_t mem_lock;
+static spinlock_t heap_lock;
+
 void init_memory_management() {
+    spinlock_init(&mem_lock);
     for (int i = 0; i < TOTAL_PAGES; i++) {
         page_table[i].allocated = 0;
+        page_table[i].owner_pid = -1;
     }
     last_page_index = 0;
 }
@@ -31,34 +38,49 @@ void init_memory_management() {
  * @param size Requested size (must be <= PAGE_SIZE).
  * @return Pointer to allocated memory or NULL if no page is available.
  */
-void* allocate_memory(size_t size) {
+void* allocate_process_memory(int pid, size_t size) {
     if (size > PAGE_SIZE) {
         return NULL;
     }
 
-    // Find a free page starting from last_page_index (Next-Fit)
+    spinlock_acquire(&mem_lock);
     for (int i = 0; i < TOTAL_PAGES; i++) {
         int idx = (last_page_index + i) % TOTAL_PAGES;
         if (!page_table[idx].allocated) {
             page_table[idx].allocated = 1;
-            last_page_index = (idx + 1) % TOTAL_PAGES; // Save hint for next time
+            page_table[idx].owner_pid = pid;
+            last_page_index = (idx + 1) % TOTAL_PAGES;
+            spinlock_release(&mem_lock);
             return (void*)&memory_pool[idx * PAGE_SIZE];
         }
     }
+    spinlock_release(&mem_lock);
+    return NULL;
+}
 
-    return NULL;  // No free page
+void* allocate_memory(size_t size) {
+    return allocate_process_memory(-1, size);
+}
+
+void free_process_memory(int pid, void* ptr) {
+    uintptr_t offset = (uintptr_t)ptr - (uintptr_t)memory_pool;
+    if (offset % PAGE_SIZE != 0) return;
+
+    spinlock_acquire(&mem_lock);
+    size_t page_index = offset / PAGE_SIZE;
+    if (page_index < TOTAL_PAGES) {
+        if (page_table[page_index].allocated) {
+            if (page_table[page_index].owner_pid == pid || page_table[page_index].owner_pid == -1) {
+                page_table[page_index].allocated = 0;
+                page_table[page_index].owner_pid = -1;
+            }
+        }
+    }
+    spinlock_release(&mem_lock);
 }
 
 void free_memory(void* ptr) {
-    uintptr_t offset = (uintptr_t)ptr - (uintptr_t)memory_pool;
-
-    // Ensure the pointer is page-aligned and within bounds
-    if (offset % PAGE_SIZE != 0) return;
-
-    size_t page_index = offset / PAGE_SIZE;
-    if (page_index < TOTAL_PAGES) {
-        page_table[page_index].allocated = 0;
-    }
+    free_process_memory(-1, ptr);
 }
 
 #define HEAP_MAX_SIZE (1024 * 1024)
@@ -73,12 +95,14 @@ typedef struct block {
 static block_t *free_list = (block_t *)heap_mem;
 
 void init_heap() {
+    spinlock_init(&heap_lock);
     free_list->size = HEAP_MAX_SIZE - sizeof(block_t);
     free_list->free = 1;
     free_list->next = NULL;
 }
 
 void* malloc(size_t size) {
+    spinlock_acquire(&heap_lock);
     block_t *curr = free_list;
     while (curr) {
         if (curr->free && curr->size >= size) {
@@ -93,15 +117,18 @@ void* malloc(size_t size) {
                 curr->next = new_block;
             }
             curr->free = 0;
+            spinlock_release(&heap_lock);
             return (void *)((uint8_t *)curr + sizeof(block_t));
         }
         curr = curr->next;
     }
+    spinlock_release(&heap_lock);
     return NULL;
 }
 
 void free(void* ptr) {
     if (!ptr) return;
+    spinlock_acquire(&heap_lock);
     block_t *target = (block_t *)((uint8_t *)ptr - sizeof(block_t));
     target->free = 1;
     
@@ -115,4 +142,5 @@ void free(void* ptr) {
             curr = curr->next;
         }
     }
+    spinlock_release(&heap_lock);
 }

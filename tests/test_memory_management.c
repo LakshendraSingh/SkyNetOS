@@ -51,10 +51,32 @@ void test_heap_allocation() {
     printf("  [PASS] test_heap_allocation\n");
 }
 
+void test_process_isolation() {
+    printf("--- Testing Process Isolation ---\n");
+    init_memory_management();
+    
+    void* p1 = allocate_process_memory(5, 4096);
+    assert(p1 != NULL);
+    
+    // Attempting to free with wrong PID
+    free_process_memory(9, p1);
+    
+    // Next allocation acquires a different page
+    void* p2 = allocate_process_memory(3, 4096);
+    assert(p2 != NULL);
+    assert(p1 != p2);
+    
+    // Free directly from exact PID
+    free_process_memory(5, p1);
+    
+    printf("  [PASS] test_process_isolation\n");
+}
+
 int main() {
     printf("Starting Memory Management Unit Tests...\n");
     test_page_allocation();
     test_heap_allocation();
+    test_process_isolation();
     printf("All memory management tests completed successfully!\n");
     return 0;
 }

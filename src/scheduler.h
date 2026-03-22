@@ -4,10 +4,14 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "sync.h"
 
 #define MAX_TASKS 16
 #define MAX_RESOURCES 3
 #define NUM_QUEUES 3
+#define MAX_THREADS_PER_TASK 4
+#define MAX_IPC_MESSAGES 5
+#define MAX_MSG_LENGTH 64
 
 // Resource indices for Banker's Algorithm
 #define RES_CPU    0
@@ -22,6 +26,11 @@ typedef enum {
 } task_state_t;
 
 typedef struct {
+    char message[MAX_MSG_LENGTH];
+    bool valid;
+} ipc_message_t;
+
+typedef struct {
     int pid;
     int priority_level;   // Current MLFQ queue (0 = Highest Priority)
     task_state_t state;
@@ -31,6 +40,11 @@ typedef struct {
     int max_demand[MAX_RESOURCES];
     int allocation[MAX_RESOURCES];
     int need[MAX_RESOURCES];
+    
+    int thread_count;
+    ipc_message_t mailbox[MAX_IPC_MESSAGES];
+    int msg_count;
+    mutex_t ipc_mutex;
 } tcb_t;
 
 // Resource management
@@ -98,5 +112,29 @@ void priority_boost();
  * @return True if found, false otherwise.
  */
 bool get_task_info(int pid, tcb_t* out);
+
+/**
+ * System tick to simulate time passing for background processes.
+ */
+void system_tick();
+
+/**
+ * Add a thread to an existing process.
+ */
+bool thread_create(int pid);
+
+/**
+ * Send an IPC message to a process.
+ */
+bool ipc_send(int receiver_pid, const char* msg);
+
+/**
+ * Retrieve the oldest IPC message for a process.
+ */
+bool ipc_receive(int receiver_pid, char* buffer_out);
+
+int get_current_pid();
+void task_block(int pid);
+void task_unblock(int pid);
 
 #endif // SCHEDULER_H
