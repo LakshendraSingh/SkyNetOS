@@ -36,6 +36,7 @@ typedef struct {
     task_state_t state;
     int remaining_quantum;
     int time_slice;       // Total time slice for the current priority level
+    int remaining_work;   // Simulated work units left (-1 = infinite/manual)
     
     int max_demand[MAX_RESOURCES];
     int allocation[MAX_RESOURCES];
@@ -136,5 +137,12 @@ bool ipc_receive(int receiver_pid, char* buffer_out);
 int get_current_pid();
 void task_block(int pid);
 void task_unblock(int pid);
+
+/**
+ * Set the remaining work units for a task.
+ * The task auto-terminates when work reaches 0.
+ * Set to -1 for infinite (manual termination only).
+ */
+void task_set_work(int pid, int work_units);
 
 #endif // SCHEDULER_H

@@ -21,3 +21,4 @@ a.out
 # Test binaries
 test_*
 !tests/test_*
+

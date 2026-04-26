@@ -3,6 +3,15 @@
 #include "error_codes.h"
 #include "scheduler.h"
 
+/* GUI output redirection */
+bool gui_output_mode = false;
+static void (*gui_print_fn)(const char*) = 0;
+static void (*gui_putchar_fn)(char) = 0;
+
+void io_set_gui_output(void (*print_fn)(const char*), void (*putchar_fn)(char)) {
+    gui_print_fn = print_fn;
+    gui_putchar_fn = putchar_fn;
+}
 
 #ifdef __i386__
 static inline uint8_t inb(uint16_t port) {
@@ -150,6 +159,10 @@ void print_char(char c) {
 }
 
 void print(const char* str) {
+    if (gui_output_mode && gui_print_fn) {
+        gui_print_fn(str);
+        return;
+    }
     while (*str) {
         unsigned char c = (unsigned char)*str;
         // Convert 3-byte UTF-8 box-drawing/block chars to CP437
@@ -197,6 +210,14 @@ void print(const char* str) {
 }
 
 void print_int(int n) {
+    if (gui_output_mode && gui_putchar_fn) {
+        if (n == 0) { gui_putchar_fn('0'); return; }
+        if (n < 0) { gui_putchar_fn('-'); n = -n; }
+        char buf[12]; int i = 0;
+        while (n > 0) { buf[i++] = '0' + (n % 10); n /= 10; }
+        while (--i >= 0) gui_putchar_fn(buf[i]);
+        return;
+    }
     if (n == 0) {
         print_char('0');
         return;
@@ -301,4 +322,109 @@ void read_line_masked(char* buffer, int max_len) {
         }
     }
     buffer[i] = '\0';
+}
+
+/* ═══════════════ PS/2 Mouse Driver ═══════════════ */
+
+#ifdef __i386__
+static int mouse_cycle = 0;
+static uint8_t mouse_packet[3];
+
+static void mouse_wait_write(void) {
+    for (int t = 100000; t > 0; t--)
+        if (!(inb(0x64) & 2)) return;
+}
+
+static void mouse_wait_read(void) {
+    for (int t = 100000; t > 0; t--)
+        if (inb(0x64) & 1) return;
+}
+
+static void mouse_cmd(uint8_t cmd) {
+    mouse_wait_write();
+    outb(0x64, 0xD4);     // Next byte goes to mouse
+    mouse_wait_write();
+    outb(0x60, cmd);
+}
+#endif
+
+void mouse_init(void) {
+#ifdef __i386__
+    mouse_cycle = 0;
+
+    // Enable auxiliary device
+    mouse_wait_write();
+    outb(0x64, 0xA8);
+
+    // Get controller config, enable IRQ12 + mouse clock
+    mouse_wait_write();
+    outb(0x64, 0x20);
+    mouse_wait_read();
+    uint8_t status = inb(0x60);
+    status |= 2;       // Enable IRQ12
+    status &= ~0x20;   // Enable mouse clock
+    mouse_wait_write();
+    outb(0x64, 0x60);
+    mouse_wait_write();
+    outb(0x60, status);
+
+    // Default settings + enable data reporting
+    mouse_cmd(0xF6);
+    mouse_wait_read(); inb(0x60);  // ACK
+    mouse_cmd(0xF4);
+    mouse_wait_read(); inb(0x60);  // ACK
+#endif
+}
+
+void mouse_disable(void) {
+#ifdef __i386__
+    mouse_cmd(0xF5);               // Disable data reporting
+    mouse_wait_read(); inb(0x60);  // ACK
+#endif
+}
+
+int input_poll(uint8_t *scancode, int *mouse_dx, int *mouse_dy, int *mouse_buttons) {
+#ifdef __i386__
+    uint8_t st = inb(0x64);
+    if (!(st & 0x01)) return INPUT_NONE;  // No data
+
+    uint8_t data = inb(0x60);
+
+    if (st & 0x20) {
+        // Auxiliary (mouse) data
+        switch (mouse_cycle) {
+            case 0:
+                if (data & 0x08) {        // Sync bit must be set
+                    mouse_packet[0] = data;
+                    mouse_cycle = 1;
+                }
+                break;
+            case 1:
+                mouse_packet[1] = data;
+                mouse_cycle = 2;
+                break;
+            case 2:
+                mouse_packet[2] = data;
+                mouse_cycle = 0;
+
+                *mouse_buttons = mouse_packet[0] & 0x07;
+                int dx = mouse_packet[1];
+                int dy = mouse_packet[2];
+                if (mouse_packet[0] & 0x10) dx |= 0xFFFFFF00;  // Sign-extend X
+                if (mouse_packet[0] & 0x20) dy |= 0xFFFFFF00;  // Sign-extend Y
+                if (mouse_packet[0] & 0xC0) { dx = 0; dy = 0; } // Overflow → ignore
+                *mouse_dx = dx;
+                *mouse_dy = -dy;  // Screen Y is inverted
+                return INPUT_MOUSE;
+        }
+        return INPUT_NONE;  // Partial packet, not ready yet
+    } else {
+        // Keyboard scancode
+        *scancode = data;
+        return INPUT_KEYBOARD;
+    }
+#else
+    (void)scancode; (void)mouse_dx; (void)mouse_dy; (void)mouse_buttons;
+    return INPUT_NONE;
+#endif
 }

@@ -10,7 +10,7 @@
 #include "memory_management.h"
 #include "disk_scheduler.h"
 
-void handle_command(const char* command);
+
 void print_help();
 
 void ps_command() {
@@ -190,8 +190,13 @@ void handle_command(const char* command) {
         if (background) {
             int res[] = {2, 2, 2};
             int pid = task_create(res);
-            print("Started simulated load task with PID: ");
-            print_int(pid); print("\n");
+            if (pid >= 0) {
+                task_set_work(pid, 50); // Auto-terminate after 50 ticks
+                print("Started simulated load task with PID: ");
+                print_int(pid); print("\n");
+            } else {
+                print("Error: Could not create task (task table full).\n");
+            }
         } else {
             print("Running simulated load synchronously...\n");
             for(volatile int i=0; i<1000000; i++);
@@ -200,10 +205,10 @@ void handle_command(const char* command) {
     } else if (strcmp(cmd_buffer, "gui") == 0) {
         print("Entering GUI mode...\n");
         gui_init();
-        gui_create_window("System Monitor", 50, 50, 400, 300, 15);
-        gui_create_window("About SkyNet", 500, 100, 250, 150, 14);
-        gui_render();
-        read_char();
+        gui_create_window("System Monitor", 50, 50, 350, 280, 15, WIN_SYSMON);
+        gui_create_window("About SkyNet", 480, 80, 250, 200, 14, WIN_ABOUT);
+        gui_create_window("Terminal", 30, 200, 440, 340, 0, WIN_TERMINAL);
+        gui_event_loop();
         vga_set_text_mode();
         clear_screen();
         print("Returned to text mode.\n");
@@ -222,10 +227,10 @@ void print_help() {
     print("  touch <f>  - Create an empty file\n");
     print("  mkdir <d>  - Create a directory\n");
     print("  rm <file>  - Delete a file\n");
-    print("  edit <file>- Edit or create a file\n");
+    print("  edit <file> - Edit or create a file\n");
     print("  ps         - List active processes\n");
     print("  kill <pid> - Terminate a process\n");
-    print("  sim_load   - Run simulated workload (& for bg)\n");
+    print("  sim-load   - Run simulated workload (& for bg)\n");
     print("  gui        - Start GUI mode\n");
     print("  exit       - Shutdown the system\n");
 }

@@ -37,6 +37,7 @@ int task_create(int max_resources[MAX_RESOURCES]) {
             tasks[i].priority_level = 0; // New tasks start at highest priority
             tasks[i].remaining_quantum = quantums[0];
             tasks[i].time_slice = quantums[0];
+            tasks[i].remaining_work = -1; // Infinite by default
             
             tasks[i].thread_count = 1;
             tasks[i].msg_count = 0;
@@ -179,7 +180,6 @@ void schedule() {
     if (next_pid != -1) {
         current_pid = next_pid;
         tasks[current_pid].state = TASK_RUNNING;
-        print("Switching to Task "); print_int(current_pid); print(" (Queue "); print_int(tasks[current_pid].priority_level); print(").\n");
     }
 }
 
@@ -200,7 +200,6 @@ void task_yield(bool used_full_quantum) {
     int q = tasks[current_pid].priority_level;
     queues[q][queue_counts[q]++] = current_pid;
     
-    print("Task "); print_int(current_pid); print(" yielded. Next in Queue "); print_int(q); print(".\n");
     current_pid = -1;
     schedule();
 }
@@ -226,6 +225,16 @@ bool get_task_info(int pid, tcb_t* out) {
 
 void system_tick() {
     if (current_pid != -1) {
+        // Decrement work if task has finite work
+        if (tasks[current_pid].remaining_work > 0) {
+            tasks[current_pid].remaining_work--;
+            if (tasks[current_pid].remaining_work == 0) {
+                print("[bg] Task "); print_int(current_pid); print(" completed.\n");
+                task_terminate(current_pid);
+                current_pid = -1;
+                return;
+            }
+        }
         tasks[current_pid].remaining_quantum--;
         if (tasks[current_pid].remaining_quantum <= 0) {
             task_yield(true);
@@ -314,4 +323,9 @@ void task_unblock(int pid) {
     tasks[pid].state = TASK_READY;
     int q = tasks[pid].priority_level;
     queues[q][queue_counts[q]++] = pid;
+}
+
+void task_set_work(int pid, int work_units) {
+    if (pid < 0 || pid >= MAX_TASKS || tasks[pid].state == TASK_TERMINATED) return;
+    tasks[pid].remaining_work = work_units;
 }
