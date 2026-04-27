@@ -10,8 +10,10 @@ A baremetal x86 operating system built from scratch — bootloader, kernel, shel
 |-----------|-------------|
 | **Bootloader** | Custom 512-byte MBR bootloader with real→protected mode transition |
 | **Kernel** | 32-bit protected mode C kernel with modular architecture |
-| **Shell** | Interactive command-line interface with 12+ commands |
+| **Shell** | Interactive command-line interface with 15+ commands |
 | **GUI** | 800×600 SVGA desktop with window manager (BGA + LFB) |
+| **Networking**| TCP/IP stack with DNS resolution (RTL8139 driver) |
+| **Browser** | Simple text-based HTTP browser (**In Development**) |
 | **Scheduler** | MLFQ with background simulated ticks and basic IPC messaging |
 | **Multithreading**| Task thread counters via TCB simulation |
 | **Memory** | Page-based allocator with basic Process Isolation via PID tagging |
@@ -54,14 +56,16 @@ SkyNet > help
   touch <f>  - Create an empty file
   mkdir <d>  - Create a directory
   rm <file>  - Delete a file
+  edit <f>   - Simple text editor (:wq to save)
   ps         - List active processes
   kill <pid> - Terminate a process
   sim-load   - Run simulated workload (& for bg)
   ipc-send   - Send IPC msg: ipc-send <pid> <msg>
   ipc-recv   - Read IPC msg from process mailbox
-  thread-add - Create mock thread for process
   disk-test  - Run SSTF disk scheduler test
   gui        - Start GUI mode
+  doom       - Play DOOM (Ported)
+  browser <u>- HTTP browser (supports IP or Domain)
   exit       - Shutdown the system
 ```
 
@@ -77,6 +81,8 @@ SkyNet > help
 │ Security │ Scheduler │  File System  │
 │  (SHA-3) │  (MLFQ)   │   (In-Mem)   │
 ├──────────┴───────────┴───────────────┤
+│      Networking (TCP/IP + DNS)       │
+├──────────────────────────────────────┤
 │     Memory Manager (Pages + Heap)    │
 ├──────────────────────────────────────┤
 │   I/O Layer (VGA + PS/2 Keyboard)    │
@@ -98,14 +104,17 @@ src/
 ├── vga.c / vga.h       # VGA/BGA graphics driver
 ├── gui.c / gui.h       # Window manager + font engine
 ├── shell.c / shell.h   # Command-line shell
+├── net.c / net.h       # TCP/IP stack + DNS resolution
+├── browser.c / .h      # Simple HTTP browser (In Dev)
+├── rtl8139.c / .h      # Realtek 8139 Network driver
+├── pci.c / pci.h       # PCI bus scanning
 ├── scheduler.c / .h    # MLFQ task scheduler
-├── memory_management.c # Page + heap allocator with basic process isolation
+├── memory_management.c # Page + heap allocator
 ├── file_system.c / .h  # In-memory file system
-├── disk_scheduler.c/.h # SSTF disk scheduling algorithm logic
+├── disk_scheduler.c/.h # SSTF disk scheduling logic
 ├── security.c / .h     # SHA-3 authentication
 ├── sha3.c / sha3.h     # SHA-3 256 implementation
 ├── string.c / .h       # Freestanding libc subset
-├── error_codes.h       # System error definitions
 └── linkerscript.ld     # Kernel memory layout
 ```
 
