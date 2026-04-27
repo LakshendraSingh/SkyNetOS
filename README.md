@@ -1,7 +1,6 @@
 # SkyNetOS
 
 A baremetal x86 operating system built from scratch — bootloader, kernel, shell, GUI, and all.
-Note :  Networking features currently unavailable (under developement)
 
 ![x86](https://img.shields.io/badge/arch-x86-blue) ![NASM](https://img.shields.io/badge/asm-NASM-orange) ![C](https://img.shields.io/badge/lang-C99-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
@@ -13,7 +12,7 @@ Note :  Networking features currently unavailable (under developement)
 | **Kernel** | 32-bit protected mode C kernel with modular architecture |
 | **Shell** | Interactive command-line interface with 15+ commands |
 | **GUI** | 800×600 SVGA desktop with window manager (BGA + LFB) |
-| **Networking**| TCP/IP stack with DNS resolution (RTL8139 driver) |
+| **Networking**| TCP/IP stack with DNS resolution (RTL8139 driver) (**In Development**)|
 | **Browser** | Simple text-based HTTP browser (**In Development**) |
 | **Scheduler** | MLFQ with background simulated ticks and basic IPC messaging |
 | **Multithreading**| Task thread counters via TCB simulation |
