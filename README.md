@@ -129,6 +129,10 @@ src/
 - **IPC & Background Processing**: Mailbox queues supporting up to 5 unread messages strictly isolated per task natively locked by Mutex bounds; system ticks inject asynchronous background MLFQ updates dynamically.
 - **Disk Scheduling**: FCFS/SSTF algorithms exposed virtually to sequence IO natively monitored strictly by independent Atomic Spinlocks minimizing algorithmic faults.
 
+## Acknowledgements
+
+- https://github.com/Daivuk/PureDOOM
+  
 ## License
 
 MIT
