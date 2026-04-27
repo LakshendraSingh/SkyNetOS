@@ -1,6 +1,7 @@
 # SkyNetOS
 
 A baremetal x86 operating system built from scratch — bootloader, kernel, shell, GUI, and all.
+Note :  Networking features currently unavailable (under developement)
 
 ![x86](https://img.shields.io/badge/arch-x86-blue) ![NASM](https://img.shields.io/badge/asm-NASM-orange) ![C](https://img.shields.io/badge/lang-C99-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
