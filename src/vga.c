@@ -108,6 +108,19 @@ void vga_set_mode_13h() {
     bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
 }
 
+void vga_set_mode_32bpp() {
+#ifdef __i386__
+    uint32_t lfb_addr = find_bochs_vga_lfb();
+    vga_mem = (uint8_t*)lfb_addr;
+#endif
+
+    bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
+    bga_write_register(VBE_DISPI_INDEX_XRES, VGA_WIDTH);
+    bga_write_register(VBE_DISPI_INDEX_YRES, VGA_HEIGHT);
+    bga_write_register(VBE_DISPI_INDEX_BPP, 32);
+    bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
+}
+
 void vga_set_text_mode() {
     bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
 }
@@ -131,4 +144,8 @@ void vga_fill_rect(int x, int y, int w, int h, color_t color) {
 
 void vga_clear(color_t color) {
     memset(vga_mem, color, VGA_WIDTH * VGA_HEIGHT);
+}
+
+uint8_t* vga_get_framebuffer() {
+    return vga_mem;
 }

@@ -23,7 +23,7 @@ void shell_startup();
 void login();
 
 void kernel_main() {
-
+  init_serial();
   print("SkyNetOS is booting...\n");
 
   init_file_system();

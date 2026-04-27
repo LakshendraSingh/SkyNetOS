@@ -10,9 +10,11 @@
 typedef uint8_t color_t;
 
 void vga_set_mode_13h();
+void vga_set_mode_32bpp();
 void vga_set_text_mode();
 void vga_put_pixel(int x, int y, color_t color);
 void vga_fill_rect(int x, int y, int w, int h, color_t color);
 void vga_clear(color_t color);
+uint8_t* vga_get_framebuffer();
 
 #endif

@@ -11,6 +11,7 @@ void read_line(char* buffer, int max_len);
 void read_line_masked(char* buffer, int max_len);
 char read_char();
 void clear_screen();
+void init_serial();
 
 /* GUI output redirection — when true, print() → GUI terminal */
 extern bool gui_output_mode;

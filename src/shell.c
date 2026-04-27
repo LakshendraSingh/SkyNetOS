@@ -212,6 +212,10 @@ void handle_command(const char* command) {
         vga_set_text_mode();
         clear_screen();
         print("Returned to text mode.\n");
+    } else if (strcmp(cmd_buffer, "doom") == 0) {
+        print("Launching DOOM...\n");
+        extern void run_doom();
+        run_doom();
     } else {
         print("Unknown command: "); print(cmd_buffer); print("\n");
     }
@@ -232,5 +236,6 @@ void print_help() {
     print("  kill <pid> - Terminate a process\n");
     print("  sim-load   - Run simulated workload (& for bg)\n");
     print("  gui        - Start GUI mode\n");
+    print("  doom       - Play DOOM\n");
     print("  exit       - Shutdown the system\n");
 }

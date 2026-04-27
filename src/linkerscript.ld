@@ -2,9 +2,10 @@ ENTRY(_start)
 SECTIONS
 {
 
-    . = 0x10000;
+    . = 0x100000; /* Multiboot prefers >= 1MB */
     .text : ALIGN(4096)
     {
+        *(.multiboot)
         *(.text)
     }
 

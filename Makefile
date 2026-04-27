@@ -12,8 +12,8 @@ LD = $(CROSS_COMPILE)ld
 OBJCOPY = $(CROSS_COMPILE)objcopy
 AS = nasm
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/io.o ./build/shell.o ./build/security.o ./build/memory_management.o ./build/file_system.o ./build/string.o ./build/sha3.o ./build/scheduler.o ./build/vga.o ./build/gui.o ./build/disk_scheduler.o ./build/sync.o
-FLAGS = -g -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc -std=gnu99
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/io.o ./build/shell.o ./build/security.o ./build/memory_management.o ./build/file_system.o ./build/string.o ./build/sha3.o ./build/scheduler.o ./build/vga.o ./build/gui.o ./build/disk_scheduler.o ./build/sync.o ./build/doom_port.o ./build/doom_wad.o
+FLAGS = -g -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -Wall -O2 -Iinc -Isrc -std=gnu99
 
 all: 
 	$(AS) -f bin ./src/bootloader.asm -o ./bin/bootloader.bin
@@ -31,6 +31,8 @@ all:
 	$(CC) -I ./src $(FLAGS) -c ./src/gui.c -o ./build/gui.o
 	$(CC) -I ./src $(FLAGS) -c ./src/disk_scheduler.c -o ./build/disk_scheduler.o
 	$(CC) -I ./src $(FLAGS) -c ./src/sync.c -o ./build/sync.o
+	$(CC) -I ./src $(FLAGS) -Wno-int-conversion -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -c ./src/doom_port.c -o ./build/doom_port.o
+	$(OBJCOPY) -I binary -O elf32-i386 -B i386 ./bin/doom1.wad ./build/doom_wad.o
 	$(LD) -g -relocatable $(FILES) -o ./build/completeKernel.o
 	$(LD) -g -T ./src/linkerscript.ld -o ./build/kernel.elf ./build/completeKernel.o
 	$(OBJCOPY) -O binary ./build/kernel.elf ./bin/kernel.bin
@@ -39,7 +41,7 @@ all:
 	dd if=./bin/kernel.bin of=./bin/os.bin seek=1 conv=notrunc
 
 run: all
-	qemu-system-i386 -display cocoa,zoom-to-fit=on -drive format=raw,file=./bin/os.bin
+	qemu-system-i386 -display cocoa,zoom-to-fit=on -m 128 -serial file:serial.log -kernel ./build/kernel.elf -drive format=raw,file=./bin/os.bin
 
 test:
 	gcc -O0 -I./src src/security.c src/sha3.c tests/test_security.c -o test_security && ./test_security

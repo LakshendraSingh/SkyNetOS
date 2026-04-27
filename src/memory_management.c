@@ -8,7 +8,7 @@
 #include <stdint.h>   // for uint8_t, uintptr_t
 
 #define PAGE_SIZE 4096
-#define TOTAL_PAGES 1024
+#define TOTAL_PAGES 8192
 
 typedef struct {
     uint8_t allocated;  // 1 = allocated, 0 = free
@@ -83,7 +83,7 @@ void free_memory(void* ptr) {
     free_process_memory(-1, ptr);
 }
 
-#define HEAP_MAX_SIZE (1024 * 1024)
+#define HEAP_MAX_SIZE (32 * 1024 * 1024)
 static uint8_t heap_mem[HEAP_MAX_SIZE];
 
 typedef struct block {

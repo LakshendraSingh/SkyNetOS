@@ -14,12 +14,28 @@ void io_set_gui_output(void (*print_fn)(const char*), void (*putchar_fn)(char)) 
 }
 
 #ifdef __i386__
+void init_serial() {
+   outb(0x3f8 + 1, 0x00);
+   outb(0x3f8 + 3, 0x80);
+   outb(0x3f8 + 0, 0x03);
+   outb(0x3f8 + 1, 0x00);
+   outb(0x3f8 + 3, 0x03);
+   outb(0x3f8 + 2, 0xC7);
+   outb(0x3f8 + 4, 0x0B);
+}
+
+void serial_putchar(char c) {
+   outb(0x3f8, c);
+}
+
 static inline uint8_t inb(uint16_t port) {
     uint8_t ret;
     __asm__ volatile ("inb %1, %0" : "=a" (ret) : "Nd" (port));
     return ret;
 }
 #else
+void init_serial() {}
+void serial_putchar(char c) { (void)c; }
 static inline uint8_t inb(uint16_t port) {
     (void)port;
     return 0; // Mock for hosted tests
@@ -134,6 +150,7 @@ static void scroll_screen() {
 }
 
 void print_char(char c) {
+    serial_putchar(c);
     if (c == '\n') {
         cursor_pos += SCREEN_COLS - (cursor_pos % SCREEN_COLS);
     } else if (c == '\b') {
